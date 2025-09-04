@@ -76,7 +76,8 @@
 </div>
 
 <style>
-  :global(html) {
+  /* Smooth scroll utility class for intentional scrolling */
+  :global(.smooth-scroll) {
     scroll-behavior: smooth;
   }
 </style>
