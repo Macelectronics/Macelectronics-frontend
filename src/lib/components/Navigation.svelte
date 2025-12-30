@@ -75,7 +75,7 @@
 				</div>
 			</div>
 
-			<!-- Agent Login Button -->
+			<!-- Login Button -->
 			<div class="hidden lg:block animate-fade-in">
 				<a
 					href="https://reseller.macelectronics.net/login"
@@ -83,7 +83,7 @@
 					rel="noopener noreferrer"
 					class="bg-primary-400 hover:bg-primary-500 text-navy-900 font-semibold py-2 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg"
 				>
-					AGENT LOGIN
+					LOGIN
 				</a>
 			</div>
 
@@ -157,7 +157,7 @@
 				rel="noopener noreferrer"
 				class="bg-primary-400 hover:bg-primary-500 text-navy-900 font-display font-bold py-4 px-10 rounded-xl transition-all duration-200 transform hover:scale-105 text-xl shadow-lg hover:shadow-xl tracking-wide"
 			>
-				AGENT LOGIN
+				LOGIN
 			</a>
 		</div>
 	</div>
