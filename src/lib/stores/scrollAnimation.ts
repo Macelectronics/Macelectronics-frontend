@@ -1,10 +1,8 @@
-import { onMount, onDestroy } from 'svelte';
+import { onMount } from 'svelte';
 
 export function useScrollAnimation() {
-	let observer: IntersectionObserver | undefined;
-
 	onMount(() => {
-		observer = new IntersectionObserver(
+		const observer = new IntersectionObserver(
 			(entries) => {
 				entries.forEach((entry) => {
 					if (entry.isIntersecting) {
@@ -20,18 +18,11 @@ export function useScrollAnimation() {
 
 		// Observe all elements with scroll-animation class
 		const elements = document.querySelectorAll('.scroll-animation');
-		elements.forEach((el) => observer?.observe(el));
+		elements.forEach((el) => observer.observe(el));
 
+		// Cleanup function returned from onMount handles destruction
 		return () => {
-			if (observer) {
-				observer.disconnect();
-			}
-		};
-	});
-
-	onDestroy(() => {
-		if (observer) {
 			observer.disconnect();
-		}
+		};
 	});
 }
