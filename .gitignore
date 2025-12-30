@@ -80,3 +80,6 @@ jspm_packages/
 
 # SvelteKit
 .svelte-kit
+
+# Backup directory (migration backup)
+backup/
