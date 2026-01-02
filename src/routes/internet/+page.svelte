@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { useScrollAnimation } from '$lib/stores/scrollAnimation';
-	import type { StorefrontBundle } from '$lib/types/bundle';
+	import type { StorefrontBundle, Customer } from '$lib/types/bundle';
 	import CheckoutModal from '$lib/components/CheckoutModal.svelte';
 
 	interface PageData {
@@ -9,6 +9,7 @@
 			primaryColor: string;
 		} | null;
 		bundles: StorefrontBundle[];
+		customer: Customer | null;
 	}
 
 	let { data }: { data: PageData } = $props();
@@ -262,5 +263,5 @@
 
 <!-- Checkout Modal -->
 {#if showCheckout && selectedBundle}
-	<CheckoutModal bundle={selectedBundle} onClose={closeCheckout} />
+	<CheckoutModal bundle={selectedBundle} customer={data.customer} onClose={closeCheckout} />
 {/if}

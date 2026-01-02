@@ -3,8 +3,9 @@
 	import Navigation from '$lib/components/Navigation.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 	import ComingSoonPopup from '$lib/components/ComingSoonPopup.svelte';
+	import type { LayoutData } from './$types';
 
-	let { children } = $props();
+	let { children, data }: { children: any; data: LayoutData } = $props();
 
 	let popupVisible = $state(false);
 	let popupServiceName = $state('');
@@ -25,7 +26,7 @@
 </svelte:head>
 
 <div class="font-body bg-white text-gray-900 overflow-x-hidden antialiased min-h-screen flex flex-col">
-	<Navigation onComingSoon={handleComingSoon} />
+	<Navigation onComingSoon={handleComingSoon} customer={data.customer} />
 
 	<main class="pt-16 lg:pt-20 flex-1">
 		{@render children()}

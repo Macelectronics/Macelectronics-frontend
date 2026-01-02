@@ -1,27 +1,37 @@
 <script lang="ts">
-	import type { StorefrontBundle, OrderInitResponse } from '$lib/types/bundle';
+	import type { StorefrontBundle, OrderInitResponse, Customer } from '$lib/types/bundle';
 
 	interface Props {
 		bundle: StorefrontBundle;
+		customer: Customer | null;
 		onClose: () => void;
+		onOrderSuccess?: () => void;
 	}
 
-	let { bundle, onClose }: Props = $props();
+	let { bundle, customer, onClose, onOrderSuccess }: Props = $props();
 
 	// Form state
 	let beneficiaryPhone = $state('');
-	let customerPhone = $state('');
-	let customerEmail = $state('');
-	let customerName = $state('');
+	let customerPhone = $state(customer?.phoneNumber || '');
+	let customerEmail = $state(customer?.email || '');
+	let customerName = $state(customer ? `${customer.firstName} ${customer.lastName}`.trim() : '');
+	let paymentMethod = $state<'wallet' | 'paystack'>(customer ? 'wallet' : 'paystack');
 
 	// UI state
 	let step = $state<'form' | 'processing' | 'success' | 'error'>('form');
 	let errorMessage = $state('');
+	let successMessage = $state('');
 	let orderId = $state('');
+	let orderNumber = $state('');
 	let isLoading = $state(false);
 
 	// Validation
 	let phoneError = $state('');
+
+	// Calculate wallet balance check
+	let walletBalance = $derived(customer?.walletBalance ? parseFloat(customer.walletBalance) : 0);
+	let bundlePrice = $derived(parseFloat(bundle.finalPrice));
+	let hasInsufficientBalance = $derived(walletBalance < bundlePrice);
 
 	function validatePhone(phone: string): boolean {
 		// Ghana phone number validation (10 digits starting with 0)
@@ -64,6 +74,37 @@
 		step = 'processing';
 
 		try {
+			// For logged in customers using wallet payment
+			if (customer && paymentMethod === 'wallet') {
+				const response = await fetch('/api/order/wallet', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						storefrontBundleId: bundle.id,
+						beneficiaryPhone
+					})
+				});
+
+				const result = await response.json();
+
+				if (!result.success) {
+					step = 'error';
+					errorMessage = result.error || 'Failed to process order';
+					return;
+				}
+
+				// Success!
+				step = 'success';
+				orderId = result.orderId || '';
+				orderNumber = result.orderNumber || '';
+				successMessage = result.message || 'Order placed successfully!';
+				onOrderSuccess?.();
+				return;
+			}
+
+			// For guest or Paystack payment
 			const response = await fetch('/api/checkout', {
 				method: 'POST',
 				headers: {
@@ -102,13 +143,13 @@
 	}
 
 	function handleOverlayClick(e: MouseEvent) {
-		if (e.target === e.currentTarget && step === 'form') {
+		if (e.target === e.currentTarget && (step === 'form' || step === 'success')) {
 			onClose();
 		}
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape' && step === 'form') {
+		if (e.key === 'Escape' && (step === 'form' || step === 'success')) {
 			onClose();
 		}
 	}
@@ -127,7 +168,10 @@
 		return offerName;
 	}
 
-	let isFormValid = $derived(validatePhone(beneficiaryPhone));
+	let isFormValid = $derived(
+		validatePhone(beneficiaryPhone) &&
+		(paymentMethod === 'paystack' || !hasInsufficientBalance)
+	);
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -193,70 +237,143 @@
 					<p class="mt-1 text-xs text-gray-500">This is the phone number that will receive the data</p>
 				</div>
 
-				<!-- Customer Phone (Optional) -->
-				<div>
-					<label for="customerPhone" class="block text-sm font-medium text-gray-700 mb-1">Your Phone Number</label>
-					<div class="relative">
-						<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-							<i class="fas fa-mobile-alt"></i>
-						</span>
-						<input
-							type="tel"
-							id="customerPhone"
-							value={customerPhone}
-							oninput={handleCustomerPhoneInput}
-							placeholder="Same as recipient (optional)"
-							class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
-						/>
+				{#if !customer}
+					<!-- Customer Phone (Optional) - Only for guests -->
+					<div>
+						<label for="customerPhone" class="block text-sm font-medium text-gray-700 mb-1">Your Phone Number</label>
+						<div class="relative">
+							<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+								<i class="fas fa-mobile-alt"></i>
+							</span>
+							<input
+								type="tel"
+								id="customerPhone"
+								value={customerPhone}
+								oninput={handleCustomerPhoneInput}
+								placeholder="Same as recipient (optional)"
+								class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
+							/>
+						</div>
+						<p class="mt-1 text-xs text-gray-500">Leave blank if same as recipient</p>
 					</div>
-					<p class="mt-1 text-xs text-gray-500">Leave blank if same as recipient</p>
-				</div>
 
-				<!-- Customer Email (Optional) -->
-				<div>
-					<label for="customerEmail" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-					<div class="relative">
-						<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-							<i class="fas fa-envelope"></i>
-						</span>
-						<input
-							type="email"
-							id="customerEmail"
-							bind:value={customerEmail}
-							placeholder="email@example.com (optional)"
-							class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
-						/>
+					<!-- Customer Email (Optional) -->
+					<div>
+						<label for="customerEmail" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+						<div class="relative">
+							<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+								<i class="fas fa-envelope"></i>
+							</span>
+							<input
+								type="email"
+								id="customerEmail"
+								bind:value={customerEmail}
+								placeholder="email@example.com (optional)"
+								class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
+							/>
+						</div>
+						<p class="mt-1 text-xs text-gray-500">For order confirmation receipt</p>
 					</div>
-					<p class="mt-1 text-xs text-gray-500">For order confirmation receipt</p>
-				</div>
 
-				<!-- Customer Name (Optional) -->
-				<div>
-					<label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
-					<div class="relative">
-						<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-							<i class="fas fa-user"></i>
-						</span>
-						<input
-							type="text"
-							id="customerName"
-							bind:value={customerName}
-							placeholder="John Doe (optional)"
-							class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
-						/>
-					</div>
-				</div>
-
-				<!-- Payment Notice -->
-				<div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-					<div class="flex items-start">
-						<i class="fas fa-shield-alt text-blue-500 mt-0.5 mr-3"></i>
-						<div>
-							<p class="text-sm text-blue-800 font-medium">Secure Payment</p>
-							<p class="text-xs text-blue-600 mt-1">You will be redirected to Paystack to complete your payment securely.</p>
+					<!-- Customer Name (Optional) -->
+					<div>
+						<label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+						<div class="relative">
+							<span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+								<i class="fas fa-user"></i>
+							</span>
+							<input
+								type="text"
+								id="customerName"
+								bind:value={customerName}
+								placeholder="John Doe (optional)"
+								class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
+							/>
 						</div>
 					</div>
-				</div>
+				{:else}
+					<!-- Logged in customer info -->
+					<div class="bg-gray-50 rounded-lg p-4">
+						<div class="flex items-center gap-3">
+							<div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+								<i class="fas fa-user text-primary-600"></i>
+							</div>
+							<div>
+								<p class="font-medium text-gray-900">{customer.firstName} {customer.lastName}</p>
+								<p class="text-sm text-gray-500">{customer.phoneNumber}</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Payment Method Selection -->
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+						<div class="grid grid-cols-2 gap-3">
+							<button
+								type="button"
+								onclick={() => paymentMethod = 'wallet'}
+								class="p-4 border-2 rounded-lg transition-all {paymentMethod === 'wallet' ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}"
+							>
+								<div class="flex flex-col items-center gap-2">
+									<i class="fas fa-wallet text-2xl {paymentMethod === 'wallet' ? 'text-primary-600' : 'text-gray-400'}"></i>
+									<span class="text-sm font-medium {paymentMethod === 'wallet' ? 'text-primary-600' : 'text-gray-600'}">Wallet</span>
+									<span class="text-xs {paymentMethod === 'wallet' ? 'text-primary-500' : 'text-gray-400'}">
+										GHS {walletBalance.toFixed(2)}
+									</span>
+								</div>
+							</button>
+							<button
+								type="button"
+								onclick={() => paymentMethod = 'paystack'}
+								class="p-4 border-2 rounded-lg transition-all {paymentMethod === 'paystack' ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}"
+							>
+								<div class="flex flex-col items-center gap-2">
+									<i class="fas fa-credit-card text-2xl {paymentMethod === 'paystack' ? 'text-primary-600' : 'text-gray-400'}"></i>
+									<span class="text-sm font-medium {paymentMethod === 'paystack' ? 'text-primary-600' : 'text-gray-600'}">Card/MoMo</span>
+									<span class="text-xs {paymentMethod === 'paystack' ? 'text-primary-500' : 'text-gray-400'}">Paystack</span>
+								</div>
+							</button>
+						</div>
+
+						{#if paymentMethod === 'wallet' && hasInsufficientBalance}
+							<div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+								<div class="flex items-start gap-2">
+									<i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
+									<div>
+										<p class="text-sm text-red-700 font-medium">Insufficient balance</p>
+										<p class="text-xs text-red-600">
+											You need GHS {(bundlePrice - walletBalance).toFixed(2)} more.
+											<a href="/dashboard/wallet" class="underline hover:no-underline">Top up your wallet</a>
+										</p>
+									</div>
+								</div>
+							</div>
+						{/if}
+					</div>
+				{/if}
+
+				<!-- Payment Notice -->
+				{#if !customer || paymentMethod === 'paystack'}
+					<div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+						<div class="flex items-start">
+							<i class="fas fa-shield-alt text-blue-500 mt-0.5 mr-3"></i>
+							<div>
+								<p class="text-sm text-blue-800 font-medium">Secure Payment</p>
+								<p class="text-xs text-blue-600 mt-1">You will be redirected to Paystack to complete your payment securely.</p>
+							</div>
+						</div>
+					</div>
+				{:else}
+					<div class="bg-green-50 border border-green-200 rounded-lg p-4">
+						<div class="flex items-start">
+							<i class="fas fa-bolt text-green-500 mt-0.5 mr-3"></i>
+							<div>
+								<p class="text-sm text-green-800 font-medium">Instant Payment</p>
+								<p class="text-xs text-green-600 mt-1">Payment will be deducted from your wallet balance instantly.</p>
+							</div>
+						</div>
+					</div>
+				{/if}
 
 				<!-- Submit Button -->
 				<button
@@ -279,7 +396,36 @@
 					<i class="fas fa-spinner fa-spin text-primary-600 text-2xl"></i>
 				</div>
 				<h3 class="text-xl font-display font-bold text-navy-900 mb-2">Processing Payment</h3>
-				<p class="text-gray-600">Please wait while we redirect you to the payment page...</p>
+				<p class="text-gray-600">
+					{#if paymentMethod === 'wallet'}
+						Processing your order...
+					{:else}
+						Please wait while we redirect you to the payment page...
+					{/if}
+				</p>
+			</div>
+		{:else if step === 'success'}
+			<!-- Success State -->
+			<div class="p-8 text-center">
+				<div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+					<i class="fas fa-check text-green-600 text-2xl"></i>
+				</div>
+				<h3 class="text-xl font-display font-bold text-navy-900 mb-2">Order Placed!</h3>
+				<p class="text-gray-600 mb-2">{successMessage}</p>
+				{#if orderNumber}
+					<p class="text-sm text-gray-500">Order number: <span class="font-mono font-medium">{orderNumber}</span></p>
+				{/if}
+				<div class="mt-6 flex gap-4 justify-center">
+					<a
+						href="/dashboard/orders"
+						class="px-6 py-2 bg-primary-400 hover:bg-primary-500 text-navy-900 font-semibold rounded-lg transition-colors"
+					>
+						View Orders
+					</a>
+					<button onclick={onClose} class="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors">
+						Close
+					</button>
+				</div>
 			</div>
 		{:else if step === 'error'}
 			<!-- Error State -->

@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import type { Customer } from '$lib/types/bundle';
+	import UserIcon from 'lucide-svelte/icons/user';
 
 	interface Props {
 		onComingSoon?: (serviceName: string) => void;
+		customer?: Customer | null;
 	}
 
-	let { onComingSoon }: Props = $props();
+	let { onComingSoon, customer }: Props = $props();
 
 	let mobileMenuOpen = $state(false);
 
@@ -75,16 +78,24 @@
 				</div>
 			</div>
 
-			<!-- Login Button -->
+			<!-- Login/Dashboard Button -->
 			<div class="hidden lg:block animate-fade-in">
-				<a
-					href="https://reseller.macelectronics.net/login"
-					target="_blank"
-					rel="noopener noreferrer"
-					class="bg-primary-400 hover:bg-primary-500 text-navy-900 font-semibold py-2 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg"
-				>
-					LOGIN
-				</a>
+				{#if customer}
+					<a
+						href="/dashboard"
+						class="inline-flex items-center gap-2 bg-primary-400 hover:bg-primary-500 text-navy-900 font-semibold py-2 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg"
+					>
+						<UserIcon class="w-4 h-4" />
+						Dashboard
+					</a>
+				{:else}
+					<a
+						href="/login"
+						class="bg-primary-400 hover:bg-primary-500 text-navy-900 font-semibold py-2 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-lg"
+					>
+						LOGIN
+					</a>
+				{/if}
 			</div>
 
 			<!-- Mobile menu button -->
@@ -151,14 +162,24 @@
 			>
 				Mobile Airtime
 			</button>
-			<a
-				href="https://reseller.macelectronics.net/login"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="bg-primary-400 hover:bg-primary-500 text-navy-900 font-display font-bold py-4 px-10 rounded-xl transition-all duration-200 transform hover:scale-105 text-xl shadow-lg hover:shadow-xl tracking-wide"
-			>
-				LOGIN
-			</a>
+			{#if customer}
+				<a
+					href="/dashboard"
+					onclick={closeMobileMenu}
+					class="inline-flex items-center gap-2 bg-primary-400 hover:bg-primary-500 text-navy-900 font-display font-bold py-4 px-10 rounded-xl transition-all duration-200 transform hover:scale-105 text-xl shadow-lg hover:shadow-xl tracking-wide"
+				>
+					<UserIcon class="w-5 h-5" />
+					Dashboard
+				</a>
+			{:else}
+				<a
+					href="/login"
+					onclick={closeMobileMenu}
+					class="bg-primary-400 hover:bg-primary-500 text-navy-900 font-display font-bold py-4 px-10 rounded-xl transition-all duration-200 transform hover:scale-105 text-xl shadow-lg hover:shadow-xl tracking-wide"
+				>
+					LOGIN
+				</a>
+			{/if}
 		</div>
 	</div>
 </nav>

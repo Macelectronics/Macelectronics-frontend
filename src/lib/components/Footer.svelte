@@ -8,6 +8,17 @@
 	function handleComingSoon(serviceName: string) {
 		onComingSoon?.(serviceName);
 	}
+
+	// Contact information
+	const contact = {
+		phone: '+233 557 190 318',
+		phoneDialable: '+233557190318',
+		email: 'support@macelectronics.com',
+		whatsappNumber: '233557190318',
+		facebook: 'https://facebook.com/macelectronics',
+		twitter: 'https://twitter.com/macelectronics',
+		instagram: 'https://instagram.com/macelectronics'
+	};
 </script>
 
 <footer class="bg-gradient-to-r from-navy-900 via-navy-800 to-navy-900 text-white">
@@ -28,24 +39,45 @@
 					Macelectronics Ghana makes digital services simple and swift. Quickly recharge mobile data, call credit, and pay utility bills in just a few clicks.
 				</p>
 
-				<div class="mb-4">
-					<p class="text-sm text-gray-300 mb-2">WhatsApp Us: +233 000 000 000</p>
-					<p class="text-sm text-gray-300">Connect with us on:</p>
+				<div class="mb-4 space-y-2">
+					<a
+						href="https://wa.me/{contact.whatsappNumber}"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="flex items-center gap-2 text-sm text-gray-300 hover:text-green-400 transition-colors"
+					>
+						<i class="fab fa-whatsapp text-lg"></i>
+						<span>WhatsApp: {contact.phone}</span>
+					</a>
+					<a
+						href="tel:{contact.phoneDialable}"
+						class="flex items-center gap-2 text-sm text-gray-300 hover:text-primary-300 transition-colors"
+					>
+						<i class="fas fa-phone text-sm"></i>
+						<span>Call: {contact.phone}</span>
+					</a>
+					<a
+						href="mailto:{contact.email}"
+						class="flex items-center gap-2 text-sm text-gray-300 hover:text-primary-300 transition-colors"
+					>
+						<i class="fas fa-envelope text-sm"></i>
+						<span>{contact.email}</span>
+					</a>
 				</div>
 
 				<!-- Social Links -->
-				<div class="flex space-x-4">
-					<a href="#" target="_blank" rel="noopener noreferrer" class="hover:text-blue-400 transition-colors duration-200" aria-label="Follow us on Facebook">
+				<div class="flex space-x-4 mt-4">
+					<a href={contact.facebook} target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-blue-600 transition-all duration-200" aria-label="Follow us on Facebook">
 						<i class="fab fa-facebook-f"></i>
 					</a>
-					<a href="#" target="_blank" rel="noopener noreferrer" class="hover:text-blue-400 transition-colors duration-200" aria-label="Follow us on Twitter">
+					<a href={contact.twitter} target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-sky-500 transition-all duration-200" aria-label="Follow us on Twitter">
 						<i class="fab fa-twitter"></i>
 					</a>
-					<a href="#" target="_blank" rel="noopener noreferrer" class="hover:text-blue-400 transition-colors duration-200" aria-label="Follow us on Instagram">
+					<a href={contact.instagram} target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-pink-600 transition-all duration-200" aria-label="Follow us on Instagram">
 						<i class="fab fa-instagram"></i>
 					</a>
-					<a href="#" target="_blank" rel="noopener noreferrer" class="hover:text-blue-400 transition-colors duration-200" aria-label="Connect with us on LinkedIn">
-						<i class="fab fa-linkedin-in"></i>
+					<a href="https://wa.me/{contact.whatsappNumber}" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-green-500 transition-all duration-200" aria-label="Chat on WhatsApp">
+						<i class="fab fa-whatsapp"></i>
 					</a>
 				</div>
 			</div>

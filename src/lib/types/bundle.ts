@@ -70,3 +70,28 @@ export interface OrderInitResponse {
 	orderId?: string;
 	error?: string;
 }
+
+// Customer types - unified with main user system
+export interface Customer {
+	id: string;
+	phoneNumber: string;
+	email: string;
+	firstName: string;
+	lastName: string;
+	accountStatus?: string;
+	tier: string; // CUSTOMER, AGENT, DEALER, etc.
+	agentNumber?: string | null;
+	walletBalance: string;
+}
+
+export interface CustomerOrder {
+	id: string;
+	orderNumber: string;
+	status: string;
+	bundleValue: string;
+	bundleName: string;
+	beneficiaryPhone: string;
+	amount: string;
+	paymentMethod: string;
+	createdAt: number;
+}

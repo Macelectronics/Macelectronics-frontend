@@ -1,14 +1,15 @@
 import type { PageServerLoad } from './$types';
 import { getStorefrontData } from '$lib/server/api';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ locals }) => {
 	const data = await getStorefrontData();
 
 	if (!data) {
 		// Return empty bundles if storefront not found
 		return {
 			storefront: null,
-			bundles: []
+			bundles: [],
+			customer: locals.customer ?? null
 		};
 	}
 
@@ -24,6 +25,7 @@ export const load: PageServerLoad = async () => {
 
 	return {
 		storefront: data.storefront,
-		bundles: sortedBundles
+		bundles: sortedBundles,
+		customer: locals.customer ?? null
 	};
 };
