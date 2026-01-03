@@ -9,15 +9,23 @@
 	import CheckCircleIcon from 'lucide-svelte/icons/check-circle';
 	import AlertCircleIcon from 'lucide-svelte/icons/alert-circle';
 	import type { SubmitFunction } from '@sveltejs/kit';
+	import PaymentVerification from '$lib/components/PaymentVerification.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let amount = $state('');
 	let isProcessing = $state(false);
 	let payStackPop: any = $state(null);
-	let currentTopupId = $state<string | null>(null);
 	let successMessage = $state<string | null>(null);
 	let errorMessage = $state<string | null>(null);
+
+	// Payment verification state
+	let showVerification = $state(false);
+	let pendingPayment = $state<{
+		topupId: string;
+		amount: string;
+		reference: string;
+	} | null>(null);
 
 	const MIN_AMOUNT = 10;
 	const MAX_AMOUNT = 10000;
@@ -46,49 +54,55 @@
 	const amountValue = $derived(parseFloat(amount) || 0);
 	const isValidAmount = $derived(amountValue >= MIN_AMOUNT && amountValue <= MAX_AMOUNT);
 
-	async function handlePaystackSuccess(topupId: string) {
-		isProcessing = true;
-		errorMessage = null;
-
-		// Call verify action
+	async function verifyPaymentFn(topupId: string) {
 		const formData = new FormData();
 		formData.append('topupId', topupId);
 
-		try {
-			const response = await fetch('?/verify', {
-				method: 'POST',
-				body: formData
-			});
+		const response = await fetch('?/verify', {
+			method: 'POST',
+			body: formData
+		});
 
-			const result = await response.json();
+		const result = await response.json();
 
-			if (result.type === 'success' && result.data?.success) {
-				successMessage = `Payment successful! Your new balance is ${formatCurrency(result.data.newBalance || '0')}`;
-				amount = '';
-				// Refresh data to get updated balance
-				await invalidateAll();
-			} else {
-				errorMessage = result.data?.error || 'Failed to verify payment. Please contact support.';
-			}
-		} catch (error) {
-			console.error('Verify error:', error);
-			errorMessage = 'An error occurred while verifying payment. Please contact support.';
-		} finally {
-			isProcessing = false;
-			currentTopupId = null;
+		if (result.type === 'success' && result.data?.success) {
+			return {
+				success: true,
+				status: result.data.status || 'payment_success',
+				message: result.data.message,
+				newBalance: result.data.newBalance
+			};
 		}
+
+		return {
+			success: false,
+			error: result.data?.error || 'Failed to verify payment',
+			status: result.data?.status || 'unknown',
+			errorCode: result.data?.errorCode
+		};
 	}
 
-	function handlePaystackCancel() {
+	function handlePaymentSuccess(newBalance: string) {
+		successMessage = `Payment successful! Your new balance is ${formatCurrency(newBalance)}`;
+		amount = '';
+		showVerification = false;
+		pendingPayment = null;
 		isProcessing = false;
-		currentTopupId = null;
+		invalidateAll();
+	}
+
+	function handlePaymentCancel() {
+		showVerification = false;
+		pendingPayment = null;
+		isProcessing = false;
 		errorMessage = 'Payment was cancelled.';
 	}
 
-	function handlePaystackError() {
+	function handlePaymentError(error: string) {
+		showVerification = false;
+		pendingPayment = null;
 		isProcessing = false;
-		currentTopupId = null;
-		errorMessage = 'Payment failed. Please try again.';
+		errorMessage = error;
 	}
 
 	const handleSubmit: SubmitFunction = ({ formData }) => {
@@ -99,8 +113,7 @@
 
 		return async ({ result, update }) => {
 			if (result.type === 'success' && result.data?.success) {
-				const { accessCode, topupId } = result.data;
-				currentTopupId = topupId;
+				const { accessCode, topupId, reference } = result.data;
 
 				if (!payStackPop) {
 					errorMessage = 'Payment system not ready. Please refresh the page.';
@@ -108,16 +121,42 @@
 					return;
 				}
 
+				// Store pending payment for verification
+				pendingPayment = {
+					topupId,
+					amount: result.data.amount || amount,
+					reference
+				};
+
 				try {
+					// Open Paystack popup
 					payStackPop.resumeTransaction(accessCode, {
-						onSuccess: () => handlePaystackSuccess(topupId),
-						onCancel: handlePaystackCancel,
-						onError: handlePaystackError
+						onSuccess: () => {
+							// Popup closed successfully - show verification modal
+							showVerification = true;
+						},
+						onCancel: () => {
+							// User cancelled - still show verification in case they completed
+							showVerification = true;
+						},
+						onError: () => {
+							// Error occurred - still show verification in case payment went through
+							showVerification = true;
+						}
 					});
+
+					// Show verification modal after a short delay
+					// This ensures the user sees the polling even if callbacks don't fire
+					setTimeout(() => {
+						if (pendingPayment && !showVerification) {
+							showVerification = true;
+						}
+					}, 2000);
 				} catch (error) {
 					console.error('Paystack error:', error);
 					errorMessage = 'Failed to open payment window.';
 					isProcessing = false;
+					pendingPayment = null;
 				}
 			} else {
 				await update();
@@ -271,3 +310,16 @@
 		</p>
 	</div>
 </section>
+
+<!-- Payment Verification Modal -->
+{#if showVerification && pendingPayment}
+	<PaymentVerification
+		topupId={pendingPayment.topupId}
+		amount={pendingPayment.amount}
+		reference={pendingPayment.reference}
+		onSuccess={handlePaymentSuccess}
+		onCancel={handlePaymentCancel}
+		onError={handlePaymentError}
+		verifyFn={verifyPaymentFn}
+	/>
+{/if}

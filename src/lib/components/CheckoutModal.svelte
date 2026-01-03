@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { StorefrontBundle, OrderInitResponse, Customer } from '$lib/types/bundle';
+	import CheckoutPaymentVerification from './CheckoutPaymentVerification.svelte';
 
 	interface Props {
 		bundle: StorefrontBundle;
@@ -25,6 +26,14 @@
 	let orderNumber = $state('');
 	let isLoading = $state(false);
 
+	// Paystack inline popup state
+	let payStackPop: any = $state(null);
+	let showPaymentVerification = $state(false);
+	let pendingPayment = $state<{
+		reference: string;
+		amount: string;
+	} | null>(null);
+
 	// Validation
 	let phoneError = $state('');
 
@@ -32,6 +41,18 @@
 	let walletBalance = $derived(customer?.walletBalance ? parseFloat(customer.walletBalance) : 0);
 	let bundlePrice = $derived(parseFloat(bundle.finalPrice));
 	let hasInsufficientBalance = $derived(walletBalance < bundlePrice);
+
+	// Load Paystack inline JS
+	$effect(() => {
+		(async () => {
+			try {
+				const paystack = await import('@paystack/inline-js');
+				payStackPop = new paystack.default();
+			} catch (error) {
+				console.error('Failed to load Paystack:', error);
+			}
+		})();
+	});
 
 	function validatePhone(phone: string): boolean {
 		// Ghana phone number validation (10 digits starting with 0)
@@ -130,8 +151,44 @@
 			// Store order ID for confirmation
 			orderId = result.orderId || '';
 
-			// Redirect to Paystack
-			if (result.authorizationUrl) {
+			// Use inline popup if access code is available
+			if (result.accessCode && payStackPop) {
+				pendingPayment = {
+					reference: result.reference || '',
+					amount: bundle.finalPrice
+				};
+
+				try {
+					payStackPop.resumeTransaction(result.accessCode, {
+						onSuccess: () => {
+							showPaymentVerification = true;
+						},
+						onCancel: () => {
+							// User cancelled - still show verification in case they completed
+							showPaymentVerification = true;
+						},
+						onError: () => {
+							// Error occurred - still show verification in case payment went through
+							showPaymentVerification = true;
+						}
+					});
+
+					// Show verification modal after a short delay
+					// This ensures the user sees the polling even if callbacks don't fire
+					setTimeout(() => {
+						if (pendingPayment && !showPaymentVerification) {
+							showPaymentVerification = true;
+						}
+					}, 2000);
+				} catch (error) {
+					console.error('Paystack popup error:', error);
+					// Fall back to redirect
+					if (result.authorizationUrl) {
+						window.location.href = result.authorizationUrl;
+					}
+				}
+			} else if (result.authorizationUrl) {
+				// Fall back to redirect if no access code
 				window.location.href = result.authorizationUrl;
 			}
 		} catch (error) {
@@ -140,6 +197,30 @@
 		} finally {
 			isLoading = false;
 		}
+	}
+
+	function handlePaymentSuccess(completedOrderId: string, completedOrderNumber?: string) {
+		showPaymentVerification = false;
+		pendingPayment = null;
+		step = 'success';
+		orderId = completedOrderId;
+		orderNumber = completedOrderNumber || '';
+		successMessage = 'Order placed successfully! Your data bundle will be delivered shortly.';
+		onOrderSuccess?.();
+	}
+
+	function handlePaymentCancel() {
+		showPaymentVerification = false;
+		pendingPayment = null;
+		step = 'error';
+		errorMessage = 'Payment was cancelled or could not be verified.';
+	}
+
+	function handlePaymentError(error: string) {
+		showPaymentVerification = false;
+		pendingPayment = null;
+		step = 'error';
+		errorMessage = error;
 	}
 
 	function handleOverlayClick(e: MouseEvent) {
@@ -359,7 +440,7 @@
 							<i class="fas fa-shield-alt text-blue-500 mt-0.5 mr-3"></i>
 							<div>
 								<p class="text-sm text-blue-800 font-medium">Secure Payment</p>
-								<p class="text-xs text-blue-600 mt-1">You will be redirected to Paystack to complete your payment securely.</p>
+								<p class="text-xs text-blue-600 mt-1">Payment will be processed securely via Paystack. You'll stay on this page during payment.</p>
 							</div>
 						</div>
 					</div>
@@ -400,7 +481,7 @@
 					{#if paymentMethod === 'wallet'}
 						Processing your order...
 					{:else}
-						Please wait while we redirect you to the payment page...
+						Initializing payment...
 					{/if}
 				</p>
 			</div>
@@ -416,12 +497,14 @@
 					<p class="text-sm text-gray-500">Order number: <span class="font-mono font-medium">{orderNumber}</span></p>
 				{/if}
 				<div class="mt-6 flex gap-4 justify-center">
-					<a
-						href="/dashboard/orders"
-						class="px-6 py-2 bg-primary-400 hover:bg-primary-500 text-navy-900 font-semibold rounded-lg transition-colors"
-					>
-						View Orders
-					</a>
+					{#if customer}
+						<a
+							href="/dashboard/orders"
+							class="px-6 py-2 bg-primary-400 hover:bg-primary-500 text-navy-900 font-semibold rounded-lg transition-colors"
+						>
+							View Orders
+						</a>
+					{/if}
 					<button onclick={onClose} class="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg transition-colors">
 						Close
 					</button>
@@ -451,3 +534,16 @@
 		{/if}
 	</div>
 </div>
+
+<!-- Payment Verification Modal -->
+{#if showPaymentVerification && pendingPayment}
+	<CheckoutPaymentVerification
+		reference={pendingPayment.reference}
+		amount={pendingPayment.amount}
+		bundleName={bundle.bundleCapacity}
+		beneficiaryPhone={beneficiaryPhone}
+		onSuccess={handlePaymentSuccess}
+		onCancel={handlePaymentCancel}
+		onError={handlePaymentError}
+	/>
+{/if}

@@ -37,6 +37,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({
 			success: true,
 			authorizationUrl: result.authorizationUrl,
+			accessCode: result.accessCode,
 			reference: result.reference,
 			orderId: result.orderId
 		});

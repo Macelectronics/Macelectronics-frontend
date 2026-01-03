@@ -61,6 +61,7 @@ export async function initializePayment(data: CheckoutData): Promise<OrderInitRe
 		return {
 			success: true,
 			authorizationUrl: result.authorizationUrl,
+			accessCode: result.accessCode,
 			reference: result.reference,
 			orderId: result.orderId
 		};

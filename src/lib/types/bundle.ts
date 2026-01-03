@@ -66,6 +66,7 @@ export interface CheckoutData {
 export interface OrderInitResponse {
 	success: boolean;
 	authorizationUrl?: string;
+	accessCode?: string;
 	reference?: string;
 	orderId?: string;
 	error?: string;
