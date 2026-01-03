@@ -75,6 +75,12 @@
 					>
 						Mobile Airtime
 					</button>
+					<a
+						href="/orders"
+						class="px-3 py-2 text-sm font-medium transition-colors duration-200 {currentPath === '/orders' ? 'text-white border-b-2 border-primary-400' : 'text-gray-300 hover:text-white hover:border-b-2 hover:border-primary-400'}"
+					>
+						Track Order
+					</a>
 				</div>
 			</div>
 
@@ -162,6 +168,13 @@
 			>
 				Mobile Airtime
 			</button>
+			<a
+				href="/orders"
+				onclick={closeMobileMenu}
+				class="text-white text-2xl font-medium hover:text-primary-300 transition-colors duration-200 transform hover:scale-110 {currentPath === '/orders' ? 'text-primary-300' : ''}"
+			>
+				Track Order
+			</a>
 			{#if customer}
 				<a
 					href="/dashboard"

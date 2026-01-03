@@ -304,13 +304,21 @@
 					{/if}
 				</div>
 
-				<button
-					type="button"
-					onclick={handleSuccess}
-					class="w-full py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-all"
-				>
-					Continue
-				</button>
+				<div class="space-y-3">
+					<button
+						type="button"
+						onclick={handleSuccess}
+						class="w-full py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-all"
+					>
+						Continue
+					</button>
+					<a
+						href="/orders?phone={encodeURIComponent(beneficiaryPhone)}"
+						class="block w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-all text-center"
+					>
+						Track Your Orders
+					</a>
+				</div>
 
 			{:else if status === 'failed'}
 				<!-- Failed State -->
