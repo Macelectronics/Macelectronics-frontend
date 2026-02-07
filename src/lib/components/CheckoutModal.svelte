@@ -39,8 +39,19 @@
 
 	// Calculate wallet balance check
 	let walletBalance = $derived(customer?.walletBalance ? parseFloat(customer.walletBalance) : 0);
-	let bundlePrice = $derived(parseFloat(bundle.finalPrice));
+	let bundlePrice = $derived(parseFloat(bundle.price));
 	let hasInsufficientBalance = $derived(walletBalance < bundlePrice);
+
+	/**
+	 * Format bundle value for display (e.g., "5" -> "5 GB")
+	 */
+	function formatBundleValue(value: string): string {
+		const numValue = parseFloat(value);
+		if (numValue >= 1000) {
+			return `${(numValue / 1000).toFixed(0)} TB`;
+		}
+		return `${numValue} GB`;
+	}
 
 	// Load Paystack inline JS
 	$effect(() => {
@@ -155,7 +166,7 @@
 			if (result.accessCode && payStackPop) {
 				pendingPayment = {
 					reference: result.reference || '',
-					amount: bundle.finalPrice
+					amount: bundle.price
 				};
 
 				try {
@@ -282,11 +293,11 @@
 				<div class="flex items-center justify-between">
 					<div>
 						<div class="text-sm text-gray-500">{getNetworkName(bundle.offerName)}</div>
-						<div class="text-2xl font-bold text-navy-900">{bundle.bundleCapacity}</div>
-						<div class="text-sm text-gray-500">{bundle.bundleDuration} validity</div>
+						<div class="text-2xl font-bold text-navy-900">{formatBundleValue(bundle.value)}</div>
+						<div class="text-sm text-gray-500">60 days validity</div>
 					</div>
 					<div class="text-right">
-						<div class="text-3xl font-bold text-primary-500">GHS {parseFloat(bundle.finalPrice).toFixed(2)}</div>
+						<div class="text-3xl font-bold text-primary-500">GHS {parseFloat(bundle.price).toFixed(2)}</div>
 					</div>
 				</div>
 			</div>
@@ -466,7 +477,7 @@
 						<i class="fas fa-spinner fa-spin mr-2"></i>
 						Processing...
 					{:else}
-						Pay GHS {parseFloat(bundle.finalPrice).toFixed(2)}
+						Pay GHS {parseFloat(bundle.price).toFixed(2)}
 					{/if}
 				</button>
 			</form>
@@ -540,7 +551,7 @@
 	<CheckoutPaymentVerification
 		reference={pendingPayment.reference}
 		amount={pendingPayment.amount}
-		bundleName={bundle.bundleCapacity}
+		bundleName={formatBundleValue(bundle.value)}
 		beneficiaryPhone={beneficiaryPhone}
 		onSuccess={handlePaymentSuccess}
 		onCancel={handlePaymentCancel}

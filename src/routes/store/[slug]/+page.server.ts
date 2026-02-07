@@ -1,8 +1,10 @@
 import type { PageServerLoad } from './$types';
 import { getStorefrontData } from '$lib/server/api';
 
-export const load: PageServerLoad = async ({ locals }) => {
-	const data = await getStorefrontData();
+export const load: PageServerLoad = async ({ params, locals }) => {
+	const { slug } = params;
+
+	const data = await getStorefrontData(slug);
 
 	if (!data) {
 		// Return empty data if storefront not found
@@ -10,7 +12,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			storefront: null,
 			bundles: [],
 			offerGroups: [],
-			customer: locals.customer ?? null
+			customer: locals.customer ?? null,
+			notFound: true
 		};
 	}
 
@@ -19,6 +22,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		storefront: data.storefront,
 		bundles: data.bundles,
 		offerGroups: data.offerGroups,
-		customer: locals.customer ?? null
+		customer: locals.customer ?? null,
+		notFound: false
 	};
 };

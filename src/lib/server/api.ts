@@ -3,10 +3,13 @@ import type { StorefrontData, CheckoutData, OrderInitResponse, Customer, Custome
 
 /**
  * Fetch storefront data from the backend API
+ * @param slug - Optional storefront slug. Defaults to main storefront from config.
  */
-export async function getStorefrontData(): Promise<StorefrontData | null> {
+export async function getStorefrontData(slug?: string): Promise<StorefrontData | null> {
+	const storefrontSlug = slug || config.storefrontSlug;
+
 	try {
-		const response = await fetch(`${config.apiUrl}/api/v1/storefront/${config.storefrontSlug}`);
+		const response = await fetch(`${config.apiUrl}/api/v1/storefront/${storefrontSlug}`);
 
 		if (!response.ok) {
 			console.error('Failed to fetch storefront data:', response.status, response.statusText);
@@ -22,7 +25,8 @@ export async function getStorefrontData(): Promise<StorefrontData | null> {
 
 		return {
 			storefront: data.storefront,
-			bundles: data.bundles
+			bundles: data.bundles,
+			offerGroups: data.offerGroups || []
 		};
 	} catch (error) {
 		console.error('Error fetching storefront data:', error);

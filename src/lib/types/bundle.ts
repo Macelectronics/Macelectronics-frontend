@@ -10,31 +10,25 @@ export interface Bundle {
 	offerName: string;
 }
 
+/**
+ * Public storefront bundle as returned by the API
+ * Note: API pre-filters invisible bundles and pre-sorts by display_order
+ */
 export interface StorefrontBundle {
 	id: string;
 	bundleId: string;
-	storefrontId: string;
-	markupType: 'FIXED' | 'PERCENTAGE';
-	markupValue: string;
-	isVisible: boolean;
-	displayOrder: number;
-	customName: string | null;
-	// Bundle details
-	bundleName: string;
-	bundleValue: string;
-	bundleCapacity: string;
-	bundleDuration: string;
+	name: string;
+	value: string;
+	price: string; // Final price including markup
 	offerCode: string;
 	offerName: string;
-	// Computed
-	basePrice: string;
-	finalPrice: string;
-	markupAmount: string;
+	offerProvider: string;
 }
 
+/**
+ * Public storefront data as returned by the API
+ */
 export interface Storefront {
-	id: string;
-	agentId: string;
 	slug: string;
 	businessName: string;
 	description: string | null;
@@ -46,13 +40,23 @@ export interface Storefront {
 	whatsappNumber: string | null;
 	email: string | null;
 	socialLinks: Record<string, string>;
-	isActive: boolean;
 	isVerified: boolean;
+}
+
+/**
+ * Bundles grouped by offer for tabbed display
+ */
+export interface OfferGroup {
+	offerCode: string;
+	offerName: string;
+	offerProvider: string;
+	bundles: StorefrontBundle[];
 }
 
 export interface StorefrontData {
 	storefront: Storefront;
 	bundles: StorefrontBundle[];
+	offerGroups: OfferGroup[];
 }
 
 export interface CheckoutData {

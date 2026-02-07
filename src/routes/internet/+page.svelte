@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { useScrollAnimation } from '$lib/stores/scrollAnimation';
-	import type { StorefrontBundle, Customer } from '$lib/types/bundle';
+	import type { StorefrontBundle, Customer, OfferGroup } from '$lib/types/bundle';
 	import CheckoutModal from '$lib/components/CheckoutModal.svelte';
 
 	interface PageData {
@@ -9,6 +9,7 @@
 			primaryColor: string;
 		} | null;
 		bundles: StorefrontBundle[];
+		offerGroups: OfferGroup[];
 		customer: Customer | null;
 	}
 
@@ -51,6 +52,17 @@
 			return 'Telecel';
 		}
 		return offerName;
+	}
+
+	/**
+	 * Format bundle value for display (e.g., "5" -> "5 GB")
+	 */
+	function formatBundleValue(value: string): string {
+		const numValue = parseFloat(value);
+		if (numValue >= 1000) {
+			return `${(numValue / 1000).toFixed(0)} TB`;
+		}
+		return `${numValue} GB`;
 	}
 
 	function loadMore() {
@@ -214,14 +226,14 @@
 								</div>
 								<div class="text-left">
 									<div class="text-sm font-semibold text-primary-600">{getNetworkName(bundle.offerName)}</div>
-									<div class="text-2xl font-bold text-navy-900">{bundle.bundleCapacity}</div>
+									<div class="text-2xl font-bold text-navy-900">{formatBundleValue(bundle.value)}</div>
 								</div>
 							</div>
 
 							<div class="bg-gradient-to-r {getNetworkColor(bundle.offerCode)} text-white p-4 rounded-lg mb-6">
 								<div class="grid grid-cols-3 gap-4 text-sm">
 									<div>
-										<div class="font-bold">GHS {parseFloat(bundle.finalPrice).toFixed(2)}</div>
+										<div class="font-bold">GHS {parseFloat(bundle.price).toFixed(2)}</div>
 										<div>Price</div>
 									</div>
 									<div>
@@ -229,7 +241,7 @@
 										<div>Rollover</div>
 									</div>
 									<div>
-										<div class="font-bold">{bundle.bundleDuration}</div>
+										<div class="font-bold">60 Days</div>
 										<div>Duration</div>
 									</div>
 								</div>
